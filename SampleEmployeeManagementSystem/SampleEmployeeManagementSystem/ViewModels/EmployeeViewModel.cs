@@ -10,5 +10,5 @@ public class EmployeeViewModel
     [Required] public string? Departement { get; set; }
     [Required] public DateTime DateOfBirth { get; set; }
     [Required] public int Age { get; set; }
-    [Required] public string? PhoneNumber { get; set; }
+    [Required, Phone] public string? PhoneNumber { get; set; }
 }

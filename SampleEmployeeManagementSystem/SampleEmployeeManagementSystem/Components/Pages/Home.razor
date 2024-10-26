@@ -1,13 +1,25 @@
 ﻿@page "/"
-@using SampleEmployeeManagementSystem.DataAccess
+@using SampleEmployeeManagementSystem.Components.Pages.Employees
+@using SampleEmployeeManagementSystem.DataAccess.Services
 @using SampleEmployeeManagementSystem.ViewModels
 @rendermode InteractiveServer
 @inject EmployeeService EmployeeService
-<PageTitle>Employee Management System</PageTitle>
+@inject IDialogService DialogService
+
+<PageTitle>Home</PageTitle>
+
+<h2 class="text-center">
+    Employee Management System
+</h2>
 
 <MudDataGrid @ref="m_DataGrid" T="EmployeeViewModel" ServerData="ServerReload" Filterable="false">
     <ToolBarContent>
-        <MudText Typo="Typo.h6">Periodic Elements</MudText>
+        <MudButton Class="me-2" 
+                   @onclick="CreateNewUser" 
+                   StartIcon="@Icons.Material.Filled.PersonAddAlt1" 
+                   Variant="Variant.Filled" 
+                   Color="Color.Primary">Add New Employee</MudButton>
+       
         <MudSpacer/>
         <MudTextField T="string" ValueChanged="@(s => OnSearch(s))" Placeholder="Search" Adornment="Adornment.Start"
                       AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0">
@@ -72,6 +84,15 @@
     {
         m_SearchString = text;
         return m_DataGrid?.ReloadServerData()!;
+    }
+
+    private async Task CreateNewUser()
+    {
+        var options = new DialogOptions() { MaxWidth = MaxWidth.Large };
+        var dialog = await DialogService.ShowAsync<CreateOrUpdateEmployee>("Create Employee", options);
+        var result = await dialog.Result;
+        if (result is not { Canceled: true })
+            await m_DataGrid?.ReloadServerData()!;
     }
 
 }

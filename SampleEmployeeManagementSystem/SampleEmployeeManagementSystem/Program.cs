@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using MudBlazor.Services;
 using SampleEmployeeManagementSystem.Components;
-using SampleEmployeeManagementSystem.DataAccess;
 using SampleEmployeeManagementSystem.DataAccess.Data;
+using SampleEmployeeManagementSystem.DataAccess.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 

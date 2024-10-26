@@ -1,0 +1,66 @@
+﻿@using SampleEmployeeManagementSystem.DataAccess.Services
+@using SampleEmployeeManagementSystem.ViewModels
+@inject EmployeeService EmployeeService
+@inject ISnackbar Snackbar
+@rendermode InteractiveServer
+
+<EditForm Model="@m_Model" FormName="CreateOrUpdateEmployee" OnValidSubmit="OnValidSubmit">
+    <MudDialog>
+        <DialogContent>
+            <DataAnnotationsValidator/>
+            <MudGrid Class="mb-5">
+                <MudItem xs="9" >
+                    <MudTextField T="string" Label="Full Name" Variant="Variant.Outlined" @bind-Value="m_Model.FullName" 
+                                  InputType="InputType.Text" For="() => m_Model.FullName!" ShrinkLabel />
+                </MudItem>
+                <MudItem xs="3" >
+                    <MudTextField T="int" Label="Age" Variant="Variant.Outlined" @bind-Value="m_Model.Age" 
+                                  InputType="InputType.Number" ShrinkLabel />
+                </MudItem>
+            </MudGrid>
+            <MudDatePicker Class="mb-5" Label="Date of bird" Variant="Variant.Outlined" @bind-Value="m_Date" />
+
+            <MudTextField Class="mb-5" T="string" Label="Departement" Variant="Variant.Outlined" @bind-Value="m_Model.Departement"
+                          InputType="InputType.Text" For="() => m_Model.Departement!" ShrinkLabel />
+
+            <MudTextField Class="mb-5" T="string" Label="Phone Number" Variant="Variant.Outlined" @bind-Value="m_Model.PhoneNumber" 
+                          InputType="InputType.Telephone" For="() => m_Model.PhoneNumber!" ShrinkLabel/>
+        </DialogContent>
+        <DialogActions>
+            <MudButton @onclick="Cancel">Cancel</MudButton>
+            <MudButton Color="Color.Primary" ButtonType="ButtonType.Submit">Save</MudButton>
+        </DialogActions>
+    </MudDialog>
+  </EditForm>
+@code {
+
+    [CascadingParameter]
+    private MudDialogInstance? MudDialog { get; set; }
+
+    private readonly EmployeeViewModel m_Model = new();
+    private DateTime? m_Date = DateTime.Today;
+
+    private async Task OnValidSubmit(EditContext arg)
+    {
+        if(m_Date is not null)
+        {
+            m_Model.DateOfBirth = m_Date.Value;
+        }
+        var result = await EmployeeService.AddEmployeeAsync(m_Model);
+        if (result)
+        {
+            Snackbar.Add("Employee created successfully", Severity.Success);
+            MudDialog?.Close();
+        }
+        else
+        {
+            Snackbar.Add("Failed to create employee", Severity.Error);
+        }
+    }
+
+    private void Cancel()
+    {
+        MudDialog?.Cancel();
+    }
+
+}
