@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using MudBlazor.Services;
 using SampleEmployeeManagementSystem.Components;
+using SampleEmployeeManagementSystem.DataAccess;
 using SampleEmployeeManagementSystem.DataAccess.Data;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -10,6 +11,8 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 builder.Services.AddMudServices();
+
+builder.Services.AddScoped<EmployeeService>();
 
 /* Database */
 builder.Services.AddDbContext<AppDbContext>(options =>
