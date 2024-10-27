@@ -1,12 +1,15 @@
 ﻿@page "/"
+@using ClosedXML.Excel
 @using SampleEmployeeManagementSystem.Components.Pages.Employees
 @using SampleEmployeeManagementSystem.DataAccess.Services
 @using SampleEmployeeManagementSystem.Enums
 @using SampleEmployeeManagementSystem.ViewModels
+@using Color = MudBlazor.Color
 @rendermode InteractiveServer
 @inject EmployeeService EmployeeService
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
+@inject  IJSRuntime Js
 
 <PageTitle>Home</PageTitle>
 
@@ -21,6 +24,45 @@
                    StartIcon="@Icons.Material.Filled.PersonAddAlt1" 
                    Variant="Variant.Filled" 
                    Color="Color.Primary">Add New Employee</MudButton>
+        
+        <MudFileUpload Class="me-2"
+                       T="IBrowserFile"
+                       @ref="m_ExcelUpload"
+                       FilesChanged="UploadFile">
+            <ActivatorContent>
+              
+                <MudButton Disabled="@m_Importing" StartIcon="@Icons.Custom.FileFormats.FileExcel"
+                           Variant="Variant.Filled"
+                           Color="Color.Success">
+                    @if(m_Importing)
+                    {
+                        <MudProgressCircular Color="Color.Info" Size="Size.Small" Indeterminate="true"/>
+                        <MudText Class="ms-2">Processing...</MudText>
+                    }
+                    else
+                    {
+                        <MudText>Import excel</MudText>
+                    
+                    }
+                </MudButton>
+            </ActivatorContent>
+        </MudFileUpload>
+        <MudButton StartIcon="@Icons.Custom.FileFormats.FileExcel"
+                   Variant="Variant.Filled"
+                   @onclick="ExportToExcel"
+                   Color="Color.Info"
+                   Disabled="@m_Exporting">
+            @if(m_Exporting)
+            {
+                <MudProgressCircular Color="Color.Info" Size="Size.Small" Indeterminate="true"/>
+                <MudText Class="ms-2">Processing...</MudText>
+            }
+            else
+            {
+                <MudText>Export excel</MudText>
+                    
+            }
+        </MudButton>
         <MudSpacer/>
         <MudTextField T="string" ValueChanged="@(s => OnSearch(s))" Placeholder="Search" Adornment="Adornment.Start"
                       AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0">
@@ -58,9 +100,12 @@
 </MudDataGrid>
 
 @code {
+    private bool m_Importing;
+    private bool m_Exporting;
+
     MudDataGrid<EmployeeViewModel>? m_DataGrid;
     private string? m_SearchString;
-
+    private MudFileUpload<IBrowserFile>? m_ExcelUpload;
     /// <summary>
     ///     Here we simulate getting the paged, filtered and ordered data from the server
     /// </summary>
@@ -148,7 +193,7 @@
 
         var result = await dialog.Result;
         if (result is null || result.Canceled) return;
-        
+
         var confirmed = (bool)(result.Data ?? false);
         if (!confirmed) return; 
 
@@ -162,7 +207,64 @@
         {
             Snackbar.Add("Something strong when try to delete employee", Severity.Error);
         }
-        
+
     }
 
+    private async Task UploadFile(IBrowserFile? file)
+    {
+        if (file is null) return;
+        m_Importing = true;
+        try
+        {
+            using var stream = new MemoryStream();
+            await file.OpenReadStream().CopyToAsync(stream);
+
+            stream.Position = 0;
+            using var workbook = new XLWorkbook(stream);
+            var ws = workbook.Worksheets.First();
+            var rows = ws.RowsUsed().Skip(1);
+            var employees = rows.Select(row => new EmployeeViewModel
+            {
+                FullName = row.Cell(1).Value.ToString(),
+                Departement = row.Cell(2).Value.ToString(),
+                DateOfBirth = row.Cell(3).Value,
+                Age = int.Parse(row.Cell(4).Value.ToString()),
+                PhoneNumber = row.Cell(5).Value.ToString()
+            }).ToList();
+
+
+            var parameters = new DialogParameters<ImportEmployeeDialog>
+            {
+                {x => x.Employees, employees},
+            };
+
+            var options = new DialogOptions { MaxWidth = MaxWidth.Large };
+            var dialog = await DialogService.ShowAsync<ImportEmployeeDialog>("Import Employees", parameters, options);
+
+            var result = await dialog.Result;
+            if (result is null || result.Canceled) return;
+            await m_DataGrid?.ReloadServerData()!;
+
+        }
+        catch (Exception)
+        {
+            Snackbar.Add("Failed to import employees", Severity.Error);
+        }
+        finally
+        {
+            m_Importing = false;
+            await m_ExcelUpload?.ClearAsync()!; // todo
+            
+        }
+
+    }
+
+    private async Task ExportToExcel()
+    {
+        m_Exporting = true;
+        var excelData = await EmployeeService.ExportEmployeesToExcelAsync();
+        await Js.InvokeVoidAsync("DownloadFileFromBytes", "listOfEmployees.xlsx", excelData);
+
+        m_Exporting = false;
+    }
 }
