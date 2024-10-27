@@ -1,0 +1,26 @@
+﻿<MudDialog>
+    <DialogContent>
+        <MudText>Do you really want to remove this employee? This process cannot be undone</MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton @onclick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Error" @onclick="ConfirmDelete" Variant="Variant.Filled">Remove</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+
+    [CascadingParameter]
+    private MudDialogInstance? MudDialog { get; set; }
+
+    private void Cancel()
+    {
+        MudDialog?.Cancel();
+    }
+
+    private void ConfirmDelete()
+    {
+       MudDialog?.Close(DialogResult.Ok(true));
+    }
+
+}

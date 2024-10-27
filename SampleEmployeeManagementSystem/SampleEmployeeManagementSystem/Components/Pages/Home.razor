@@ -1,10 +1,12 @@
 ﻿@page "/"
 @using SampleEmployeeManagementSystem.Components.Pages.Employees
 @using SampleEmployeeManagementSystem.DataAccess.Services
+@using SampleEmployeeManagementSystem.Enums
 @using SampleEmployeeManagementSystem.ViewModels
 @rendermode InteractiveServer
 @inject EmployeeService EmployeeService
 @inject IDialogService DialogService
+@inject ISnackbar Snackbar
 
 <PageTitle>Home</PageTitle>
 
@@ -19,7 +21,6 @@
                    StartIcon="@Icons.Material.Filled.PersonAddAlt1" 
                    Variant="Variant.Filled" 
                    Color="Color.Primary">Add New Employee</MudButton>
-       
         <MudSpacer/>
         <MudTextField T="string" ValueChanged="@(s => OnSearch(s))" Placeholder="Search" Adornment="Adornment.Start"
                       AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0">
@@ -29,9 +30,27 @@
         <PropertyColumn Property="x => x.EmployeeIdView" Title="Employee Id"/>
         <PropertyColumn Property="x => x.FullName" Title="Full Name"/>
         <PropertyColumn Property="x => x.Departement" Title="Departement"/>
-        <PropertyColumn Property="x => x.DateOfBirth" Title="DateOfBirth" Format="dd MM yyyy"/>
+        <PropertyColumn Property="x => x.DateOfBirth" Title="Date Of Birth" Format="dd MM yyyy"/>
         <PropertyColumn Property="x => x.Age"/>
-        <PropertyColumn Property="x => x.PhoneNumber"/>
+        <PropertyColumn Property="x => x.PhoneNumber" Title="Phone Number" />
+        <TemplateColumn CellClass="d-flex justify-end">
+            <CellTemplate>
+                <MudButton Class="me-2" 
+                           StartIcon="@Icons.Material.Filled.Edit" 
+                           Variant="Variant.Filled" 
+                           Color="Color.Warning" 
+                           Size="Size.Small"
+                           OnClick="@(() => UpdateEmployee(context))">
+                    Update</MudButton>
+               
+                <MudButton Size="Size.Small"
+                           OnClick="@(() => RemoveEmployee(context))"
+                           StartIcon="@Icons.Material.Filled.Delete" 
+                           Variant="Variant.Filled" 
+                           Color="Color.Error" >
+                Remove</MudButton>
+            </CellTemplate>
+        </TemplateColumn>
     </Columns>
     <PagerContent>
         <MudDataGridPager T="EmployeeViewModel"/>
@@ -88,11 +107,62 @@
 
     private async Task CreateNewUser()
     {
-        var options = new DialogOptions() { MaxWidth = MaxWidth.Large };
-        var dialog = await DialogService.ShowAsync<CreateOrUpdateEmployee>("Create Employee", options);
+        var parameters = new DialogParameters<CreateOrUpdateEmployee>
+        {
+            {x => x.Action, UiAction.Insert},
+            {x => x.Model, new EmployeeViewModel()},
+        };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Large };
+        var dialog = await DialogService.ShowAsync<CreateOrUpdateEmployee>("Create Employee", parameters, options);
         var result = await dialog.Result;
         if (result is not { Canceled: true })
             await m_DataGrid?.ReloadServerData()!;
+    }
+
+    private async Task UpdateEmployee(CellContext<EmployeeViewModel> context)
+    {
+        var employee = await EmployeeService.GetEmployeeByIdAsync(context.Item.Id);
+
+        if (employee is null)
+        {
+            Snackbar.Add("Something strong when try to update employee", Severity.Error);
+            return;
+        }
+        var parameters = new DialogParameters<CreateOrUpdateEmployee>
+        {
+            {x => x.Action, UiAction.Update},
+            {x => x.Model, employee},
+            {x => x.Date, employee.DateOfBirth},
+        };
+
+        var options = new DialogOptions { MaxWidth = MaxWidth.Large };
+        var dialog = await DialogService.ShowAsync<CreateOrUpdateEmployee>("Update Employee", parameters, options);
+        var result = await dialog.Result;
+        if (result is not { Canceled: true })
+            await m_DataGrid?.ReloadServerData()!;
+    }
+
+    private async Task RemoveEmployee(CellContext<EmployeeViewModel> context)
+    {
+        var dialog = await DialogService.ShowAsync<RemoveConfirmationDialog>($"Remove: {context.Item.FullName}");
+
+        var result = await dialog.Result;
+        if (result is null || result.Canceled) return;
+        
+        var confirmed = (bool)(result.Data ?? false);
+        if (!confirmed) return; 
+
+        var res = await EmployeeService.DeleteEmployeeAsync(context.Item.Id);
+        if (res)
+        {
+            Snackbar.Add("Employee deleted successfully", Severity.Success);
+            await m_DataGrid?.ReloadServerData()!;
+        }
+        else
+        {
+            Snackbar.Add("Something strong when try to delete employee", Severity.Error);
+        }
+        
     }
 
 }

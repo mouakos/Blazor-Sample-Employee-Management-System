@@ -20,9 +20,10 @@ public class EmployeeService(AppDbContext appDbContext)
         }).ToListAsync();
     }
 
-    public async Task<EmployeeViewModel> GetEmployeeByIdAsync(int id)
+    public async Task<EmployeeViewModel?> GetEmployeeByIdAsync(int id)
     {
         var employee = await appDbContext.Employees.FindAsync(id);
+        if (employee is null) return null;
         return new EmployeeViewModel
         {
             Id = employee.Id,
@@ -49,27 +50,44 @@ public class EmployeeService(AppDbContext appDbContext)
             await appDbContext.Employees.AddAsync(employee);
             return await appDbContext.SaveChangesAsync() > 0;
         }
-        catch (Exception e)
+        catch (Exception)
         {
             return false;
         }
     }
 
-    public async Task UpdateEmployeeAsync(EmployeeViewModel employeeViewModel)
+    public async Task<bool> UpdateEmployeeAsync(EmployeeViewModel employeeViewModel)
     {
         var employee = await appDbContext.Employees.FindAsync(employeeViewModel.Id);
+        if (employee is null) return false;
         employee.FullName = employeeViewModel.FullName;
         employee.Departement = employeeViewModel.Departement;
         employee.DateOfBirth = employeeViewModel.DateOfBirth;
         employee.Age = employeeViewModel.Age;
         employee.PhoneNumber = employeeViewModel.PhoneNumber;
-        await appDbContext.SaveChangesAsync();
+        try
+        {
+            appDbContext.Employees.Update(employee);
+            return await appDbContext.SaveChangesAsync() > 0;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
     }
 
-    public async Task DeleteEmployeeAsync(int id)
+    public async Task<bool> DeleteEmployeeAsync(int id)
     {
         var employee = await appDbContext.Employees.FindAsync(id);
-        appDbContext.Employees.Remove(employee);
-        await appDbContext.SaveChangesAsync();
+        if (employee is null) return false;
+        try
+        {
+            appDbContext.Employees.Remove(employee);
+            return await appDbContext.SaveChangesAsync() > 0;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
     }
 }

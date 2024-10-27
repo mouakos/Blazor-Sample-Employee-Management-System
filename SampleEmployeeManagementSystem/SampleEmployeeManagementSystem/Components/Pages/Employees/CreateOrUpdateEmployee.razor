@@ -1,30 +1,31 @@
 ﻿@using SampleEmployeeManagementSystem.DataAccess.Services
+@using SampleEmployeeManagementSystem.Enums
 @using SampleEmployeeManagementSystem.ViewModels
 @inject EmployeeService EmployeeService
 @inject ISnackbar Snackbar
 @rendermode InteractiveServer
 
-<EditForm Model="@m_Model" FormName="CreateOrUpdateEmployee" OnValidSubmit="OnValidSubmit">
+<EditForm Model="@Model" FormName="CreateOrUpdateEmployee" OnValidSubmit="OnValidSubmit">
     <MudDialog>
         <DialogContent>
             <DataAnnotationsValidator/>
             <MudGrid Class="mb-5">
                 <MudItem xs="9" >
-                    <MudTextField T="string" Label="Full Name" Variant="Variant.Outlined" @bind-Value="m_Model.FullName" 
-                                  InputType="InputType.Text" For="() => m_Model.FullName!" ShrinkLabel />
+                    <MudTextField T="string" Label="Full Name" Variant="Variant.Outlined" @bind-Value="Model.FullName" 
+                                  InputType="InputType.Text" For="() => Model.FullName!" ShrinkLabel />
                 </MudItem>
                 <MudItem xs="3" >
-                    <MudTextField T="int" Label="Age" Variant="Variant.Outlined" @bind-Value="m_Model.Age" 
+                    <MudTextField T="int" Label="Age" Variant="Variant.Outlined" @bind-Value="Model.Age" 
                                   InputType="InputType.Number" ShrinkLabel />
                 </MudItem>
             </MudGrid>
-            <MudDatePicker Class="mb-5" Label="Date of bird" Variant="Variant.Outlined" @bind-Value="m_Date" />
+            <MudDatePicker Class="mb-5" Label="Date of bird"  DateFormat="dd MM yyyy" Variant="Variant.Outlined" @bind-Date="Date" />
 
-            <MudTextField Class="mb-5" T="string" Label="Departement" Variant="Variant.Outlined" @bind-Value="m_Model.Departement"
-                          InputType="InputType.Text" For="() => m_Model.Departement!" ShrinkLabel />
+            <MudTextField Class="mb-5" T="string" Label="Departement" Variant="Variant.Outlined" @bind-Value="Model.Departement"
+                          InputType="InputType.Text" For="() => Model.Departement!" ShrinkLabel />
 
-            <MudTextField Class="mb-5" T="string" Label="Phone Number" Variant="Variant.Outlined" @bind-Value="m_Model.PhoneNumber" 
-                          InputType="InputType.Telephone" For="() => m_Model.PhoneNumber!" ShrinkLabel/>
+            <MudTextField Class="mb-5" T="string" Label="Phone Number" Variant="Variant.Outlined" @bind-Value="Model.PhoneNumber" 
+                          InputType="InputType.Telephone" For="() => Model.PhoneNumber!" ShrinkLabel/>
         </DialogContent>
         <DialogActions>
             <MudButton @onclick="Cancel">Cancel</MudButton>
@@ -37,16 +38,47 @@
     [CascadingParameter]
     private MudDialogInstance? MudDialog { get; set; }
 
-    private readonly EmployeeViewModel m_Model = new();
-    private DateTime? m_Date = DateTime.Today;
+    [Parameter] public UiAction Action { get; set; } = UiAction.Insert;
+
+    [Parameter]
+    public  EmployeeViewModel Model { get; set; } = new ();
+
+    [Parameter]
+    public DateTime? Date { get; set; } = DateTime.Today;
 
     private async Task OnValidSubmit(EditContext arg)
     {
-        if(m_Date is not null)
+        if(Date is not null)
+            Model.DateOfBirth = Date.Value;
+        
+        switch (Action)
         {
-            m_Model.DateOfBirth = m_Date.Value;
+            case UiAction.Insert:
+                await CreateEmployee(Model);
+                break;
+            case UiAction.Update:
+                await UpdateEmployee(Model);
+                break;
         }
-        var result = await EmployeeService.AddEmployeeAsync(m_Model);
+    }
+
+    private async Task UpdateEmployee(EmployeeViewModel employee)
+    {
+        var result = await EmployeeService.UpdateEmployeeAsync(employee);
+        if (result)
+        {
+            Snackbar.Add("Employee updated successfully", Severity.Success);
+            MudDialog?.Close();
+        }
+        else
+        {
+            Snackbar.Add("Failed to update employee", Severity.Error);
+        }
+    }
+
+    private async Task CreateEmployee(EmployeeViewModel employee)
+    {
+        var result = await EmployeeService.AddEmployeeAsync(employee);
         if (result)
         {
             Snackbar.Add("Employee created successfully", Severity.Success);
